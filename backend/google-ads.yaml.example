@@ -1,0 +1,8 @@
+client_id: YOUR_CLIENT_ID.apps.googleusercontent.com
+client_secret: YOUR_CLIENT_SECRET
+developer_token: YOUR_DEVELOPER_TOKEN
+login_customer_id: YOUR_LOGIN_CUSTOMER_ID
+refresh_token: YOUR_REFRESH_TOKEN
+token_uri: https://oauth2.googleapis.com/token
+use_proto_plus: true
+api_version: v17

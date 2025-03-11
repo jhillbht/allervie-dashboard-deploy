@@ -1,0 +1,35 @@
+name: allervie-analytics-dashboard
+services:
+- name: api
+  github:
+    branch: main
+    repo: jhillbht/allervie-dashboard-deploy
+  build_command: pip install -r requirements.txt
+  run_command: python app.py
+  http_port: 8080
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /
+  envs:
+  - key: FLASK_ENV
+    value: production
+  - key: PORT
+    value: "8080"
+  - key: GOOGLE_ADS_CLIENT_ID
+    value: "YOUR_CLIENT_ID"
+  - key: GOOGLE_ADS_CLIENT_SECRET
+    type: SECRET
+    value: "YOUR_CLIENT_SECRET"
+  - key: GOOGLE_ADS_DEVELOPER_TOKEN
+    type: SECRET
+    value: "YOUR_DEVELOPER_TOKEN"
+  - key: GOOGLE_ADS_LOGIN_CUSTOMER_ID
+    value: "8127539892"
+  - key: GOOGLE_ADS_REFRESH_TOKEN
+    type: SECRET
+    value: "YOUR_REFRESH_TOKEN"
+  - key: GOOGLE_ADS_USE_PROTO_PLUS
+    value: "true"
+  - key: GOOGLE_ADS_API_VERSION
+    value: "v17"

@@ -1,0 +1,3 @@
+# Google Ads API client
+google-ads==21.0.0
+PyYAML==6.0.2

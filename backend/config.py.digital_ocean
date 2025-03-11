@@ -1,0 +1,29 @@
+import os
+
+# Global configuration variables
+# For DigitalOcean deployment
+
+# Set to True to always attempt to use real Google Ads data
+# instead of mock data, even with mock authentication tokens
+USE_REAL_ADS_CLIENT = True
+
+# Set to False to disable fallback to mock data when real data fails
+# This can be overridden by an environment variable
+ALLOW_MOCK_DATA = os.environ.get('ALLOW_MOCK_DATA', 'false').lower() == 'true'
+
+# Set to False to disable mock authentication
+ALLOW_MOCK_AUTH = False  # No mock auth in production
+
+# Set environment (development or production)
+ENVIRONMENT = os.environ.get('FLASK_ENV', 'production')
+
+# This is the customer ID to use for Google Ads API requests
+CLIENT_CUSTOMER_ID = os.environ.get('GOOGLE_ADS_LOGIN_CUSTOMER_ID', '8127539892')
+
+# Extract other Google Ads parameters from environment
+GOOGLE_ADS_CLIENT_ID = os.environ.get('GOOGLE_ADS_CLIENT_ID', '')
+GOOGLE_ADS_CLIENT_SECRET = os.environ.get('GOOGLE_ADS_CLIENT_SECRET', '')
+GOOGLE_ADS_DEVELOPER_TOKEN = os.environ.get('GOOGLE_ADS_DEVELOPER_TOKEN', '')
+GOOGLE_ADS_REFRESH_TOKEN = os.environ.get('GOOGLE_ADS_REFRESH_TOKEN', '')
+GOOGLE_ADS_USE_PROTO_PLUS = os.environ.get('GOOGLE_ADS_USE_PROTO_PLUS', 'true').lower() == 'true'
+GOOGLE_ADS_API_VERSION = os.environ.get('GOOGLE_ADS_API_VERSION', 'v17')
