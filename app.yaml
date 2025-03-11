@@ -2,7 +2,7 @@ name: allervie-analytics-dashboard
 services:
 - name: api
   github:
-    branch: main
+    branch: google-ads-improvements
     repo: jhillbht/allervie-dashboard-deploy
   build_command: pip install -r requirements.txt
   run_command: python app.py
@@ -17,18 +17,18 @@ services:
   - key: PORT
     value: "8080"
   - key: GOOGLE_ADS_CLIENT_ID
-    value: "YOUR_CLIENT_ID"
+    value: "22083613754-d1omeg2958vrsndpqg2v1jp0ncm7sr23.apps.googleusercontent.com"
   - key: GOOGLE_ADS_CLIENT_SECRET
     type: SECRET
-    value: "YOUR_CLIENT_SECRET"
+    value: "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"
   - key: GOOGLE_ADS_DEVELOPER_TOKEN
     type: SECRET
-    value: "YOUR_DEVELOPER_TOKEN"
+    value: "EkXFENjahSDnpNRZJhWAAw"
   - key: GOOGLE_ADS_LOGIN_CUSTOMER_ID
     value: "8127539892"
   - key: GOOGLE_ADS_REFRESH_TOKEN
     type: SECRET
-    value: "YOUR_REFRESH_TOKEN"
+    value: "1//0fd0hT4p-0f4nCgYIARAAGA8SNwF-L9IrExeEoV1QfhOWXSUZCc1I1j_RpHpQ1bJ_xlDCmcDSCZ103BiUsy1MAr6awvafzZ6sPTk"
   - key: GOOGLE_ADS_USE_PROTO_PLUS
     value: "true"
   - key: GOOGLE_ADS_API_VERSION

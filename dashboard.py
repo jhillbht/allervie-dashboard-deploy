@@ -7,11 +7,11 @@ Google Ads API using environment variables and displays the data in a dashboard.
 
 import os
 import json
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import urllib.parse
 import sys
-import logging
 
 # Configure logging
 logging.basicConfig(
@@ -84,6 +84,9 @@ DASHBOARD_HTML = """
             padding: 20px 0;
             border-bottom: 1px solid #e9ecef;
         }
+        .date-picker {
+            max-width: 150px;
+        }
         .data-note {
             font-size: 0.8rem;
             color: #666;
@@ -104,11 +107,11 @@ DASHBOARD_HTML = """
                         <div class="d-flex me-3">
                             <div class="me-2">
                                 <label for="start-date" class="form-label">Start Date</label>
-                                <input type="date" id="start-date" class="form-control">
+                                <input type="date" id="start-date" class="form-control date-picker">
                             </div>
                             <div>
                                 <label for="end-date" class="form-label">End Date</label>
-                                <input type="date" id="end-date" class="form-control">
+                                <input type="date" id="end-date" class="form-control date-picker">
                             </div>
                         </div>
                         <div>
@@ -153,8 +156,36 @@ DASHBOARD_HTML = """
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5>Campaign Performance</h5>
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                <select id="region-filter" class="form-select form-select-sm">
+                                    <option value="all">All Regions</option>
+                                    <option value="southeast">Southeast</option>
+                                    <option value="northeast">Northeast</option>
+                                    <option value="midwest">Midwest</option>
+                                    <option value="southwest">Southwest</option>
+                                    <option value="west">West</option>
+                                </select>
+                            </div>
+                            <div class="me-3">
+                                <select id="campaign-type-filter" class="form-select form-select-sm">
+                                    <option value="all">All Campaign Types</option>
+                                    <option value="Search">Search</option>
+                                    <option value="PMax">Performance Max</option>
+                                    <option value="Brand">Brand</option>
+                                    <option value="NonBrand">Non-Brand</option>
+                                    <option value="Display">Display</option>
+                                    <option value="Video">Video</option>
+                                    <option value="Shopping">Shopping</option>
+                                </select>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="show-active-only">
+                                <label class="form-check-label" for="show-active-only">Active Only</label>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -218,10 +249,225 @@ DASHBOARD_HTML = """
         const apiStatus = document.getElementById('api-status');
         const chartNote = document.getElementById('chart-note');
         const campaignsNote = document.getElementById('campaigns-note');
+        const regionFilterSelect = document.getElementById('region-filter');
+        const campaignTypeFilterSelect = document.getElementById('campaign-type-filter');
+        const showActiveOnlyCheckbox = document.getElementById('show-active-only');
         
         // Chart variables
         let performanceChart = null;
         
+        // Store loaded campaign data
+        let campaignsData = [];
+        
+        // Define regions by state abbreviations
+        const stateRegions = {
+            // Southeast
+            'AL': 'southeast', // Alabama
+            'AR': 'southeast', // Arkansas
+            'FL': 'southeast', // Florida
+            'GA': 'southeast', // Georgia
+            'KY': 'southeast', // Kentucky
+            'LA': 'southeast', // Louisiana
+            'MS': 'southeast', // Mississippi
+            'NC': 'southeast', // North Carolina
+            'SC': 'southeast', // South Carolina
+            'TN': 'southeast', // Tennessee
+            'VA': 'southeast', // Virginia
+            'WV': 'southeast', // West Virginia
+            
+            // Northeast
+            'CT': 'northeast', // Connecticut
+            'DE': 'northeast', // Delaware
+            'ME': 'northeast', // Maine
+            'MD': 'northeast', // Maryland
+            'MA': 'northeast', // Massachusetts
+            'NH': 'northeast', // New Hampshire
+            'NJ': 'northeast', // New Jersey
+            'NY': 'northeast', // New York
+            'PA': 'northeast', // Pennsylvania
+            'RI': 'northeast', // Rhode Island
+            'VT': 'northeast', // Vermont
+            
+            // Midwest
+            'IL': 'midwest', // Illinois
+            'IN': 'midwest', // Indiana
+            'IA': 'midwest', // Iowa
+            'KS': 'midwest', // Kansas
+            'MI': 'midwest', // Michigan
+            'MN': 'midwest', // Minnesota
+            'MO': 'midwest', // Missouri
+            'NE': 'midwest', // Nebraska
+            'ND': 'midwest', // North Dakota
+            'OH': 'midwest', // Ohio
+            'SD': 'midwest', // South Dakota
+            'WI': 'midwest', // Wisconsin
+            
+            // Southwest
+            'AZ': 'southwest', // Arizona
+            'NM': 'southwest', // New Mexico
+            'OK': 'southwest', // Oklahoma
+            'TX': 'southwest', // Texas
+            
+            // West
+            'AK': 'west', // Alaska
+            'CA': 'west', // California
+            'CO': 'west', // Colorado
+            'HI': 'west', // Hawaii
+            'ID': 'west', // Idaho
+            'MT': 'west', // Montana
+            'NV': 'west', // Nevada
+            'OR': 'west', // Oregon
+            'UT': 'west', // Utah
+            'WA': 'west', // Washington
+            'WY': 'west'  // Wyoming
+        };
+        
+        // Function to get state abbreviation from campaign name
+        function getStateFromCampaignName(campaignName) {
+            // Check if campaign name starts with two letters followed by a dash
+            if (campaignName && campaignName.length >= 3 && campaignName.charAt(2) === '-') {
+                return campaignName.substring(0, 2).toUpperCase();
+            }
+            
+            // Secondary pattern: Check for state code in parentheses like "Campaign Name (TX)"
+            if (campaignName && campaignName.includes('(') && campaignName.includes(')')) {
+                const match = campaignName.match(/\(([A-Za-z]{2})\)/);
+                if (match && match[1]) {
+                    return match[1].toUpperCase();
+                }
+            }
+            
+            // Third pattern: Check for state name in the campaign name
+            const stateNames = {
+                'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+                'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+                'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+                'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+                'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+                'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+                'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+                'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+                'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+                'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+                'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+                'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
+                'wisconsin': 'WI', 'wyoming': 'WY'
+            };
+            
+            if (campaignName) {
+                const lowerName = campaignName.toLowerCase();
+                for (const stateName in stateNames) {
+                    if (lowerName.includes(stateName)) {
+                        return stateNames[stateName];
+                    }
+                }
+            }
+            
+            return null;
+        }
+        
+        // Function to get region from campaign name
+        function getRegionFromCampaignName(campaignName) {
+            const state = getStateFromCampaignName(campaignName);
+            if (state && stateRegions[state]) {
+                return stateRegions[state];
+            }
+            
+            // Additional heuristics for region detection
+            if (campaignName) {
+                const lowerName = campaignName.toLowerCase();
+                
+                // Check for direct region mentions
+                if (lowerName.includes('southeast') || lowerName.includes('south east')) {
+                    return 'southeast';
+                } else if (lowerName.includes('northeast') || lowerName.includes('north east')) {
+                    return 'northeast';
+                } else if (lowerName.includes('midwest') || lowerName.includes('mid west')) {
+                    return 'midwest';
+                } else if (lowerName.includes('southwest') || lowerName.includes('south west')) {
+                    return 'southwest';
+                } else if (lowerName.includes('west coast') || lowerName.includes('pacific')) {
+                    return 'west';
+                }
+            }
+            
+            return 'other';
+        }
+        
+        // Function to detect campaign type from campaign name
+        function getCampaignType(campaignName) {
+            if (!campaignName) return 'Unknown';
+            
+            // Check for specific patterns in the campaign name
+            const lowerName = campaignName.toLowerCase();
+            
+            // PMax/Performance Max detection
+            if (lowerName.includes('pmax') || 
+                lowerName.includes('performance max') || 
+                lowerName.includes('performance_max') ||
+                lowerName.includes('performancemax')) {
+                return 'PMax';
+            } 
+            
+            // Search campaign detection
+            else if (lowerName.includes('search') || 
+                    lowerName.includes('_srch_') || 
+                    lowerName.includes('-srch-')) {
+                // Check if it's also a brand campaign
+                if (lowerName.includes('brand') || 
+                    lowerName.includes('_b_') ||
+                    lowerName.includes('-b-')) {
+                    return 'Brand';
+                } 
+                // Check if it's a non-brand campaign
+                else if (lowerName.includes('nonbrand') || 
+                        lowerName.includes('non-brand') || 
+                        lowerName.includes('_nb_') ||
+                        lowerName.includes('-nb-')) {
+                    return 'NonBrand';
+                }
+                // Otherwise, just a regular search campaign
+                return 'Search';
+            } 
+            
+            // Other brand detection
+            else if (lowerName.includes('brand_') || 
+                    lowerName.includes('branded') || 
+                    lowerName.includes('_brand') || 
+                    lowerName.includes('-brand')) {
+                return 'Brand';
+            } 
+            
+            // Other non-brand detection
+            else if (lowerName.includes('nonbrand') || 
+                    lowerName.includes('non-brand') || 
+                    lowerName.includes('_non_brand') || 
+                    lowerName.includes('-non-brand')) {
+                return 'NonBrand';
+            }
+            
+            // G_ pattern Google campaign detection
+            if (campaignName.startsWith('G_')) {
+                if (campaignName.includes('_Brand_') || campaignName.includes('-Brand-')) {
+                    return 'Brand';
+                } else if (campaignName.includes('_NonBrand_') || campaignName.includes('-NonBrand-')) {
+                    return 'NonBrand';
+                }
+            }
+            
+            // Additional campaign type detection
+            if (lowerName.includes('display') || lowerName.includes('_dsp_')) {
+                return 'Display';
+            } else if (lowerName.includes('video') || lowerName.includes('youtube')) {
+                return 'Video';
+            } else if (lowerName.includes('shopping') || lowerName.includes('_sh_')) {
+                return 'Shopping';
+            }
+            
+            // Default to Search if none of the above patterns match
+            return 'Search';
+        }
+
         // Set default dates
         const today = new Date();
         const thirtyDaysAgo = new Date(today);
@@ -238,9 +484,24 @@ DASHBOARD_HTML = """
         });
 
         refreshBtn.addEventListener('click', () => {
+            console.log("Refresh button clicked");
+            console.log("Date range:", startDateInput.value, "to", endDateInput.value);
             loadPerformanceData();
             loadCampaigns();
             checkApiStatus();
+        });
+
+        // Filter event listeners
+        regionFilterSelect.addEventListener('change', () => {
+            displayFilteredCampaigns();
+        });
+        
+        campaignTypeFilterSelect.addEventListener('change', () => {
+            displayFilteredCampaigns();
+        });
+        
+        showActiveOnlyCheckbox.addEventListener('change', () => {
+            displayFilteredCampaigns();
         });
 
         // Format date helper
@@ -264,7 +525,7 @@ DASHBOARD_HTML = """
         // Check API status
         async function checkApiStatus() {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/health`);
+                const response = await fetch(`${API_BASE_URL}/api/health?cache_buster=${Date.now()}`);
                 const data = await response.json();
                 
                 if (data.has_google_ads_credentials) {
@@ -298,8 +559,26 @@ DASHBOARD_HTML = """
         // Load performance metrics
         async function loadPerformanceData() {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/google-ads/performance`);
+                metricsContainer.innerHTML = '<div class="col-12"><div class="d-flex justify-content-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div></div>';
+                
+                const params = new URLSearchParams({
+                    start_date: startDateInput.value,
+                    end_date: endDateInput.value,
+                    cache_buster: Date.now() // Prevent caching
+                });
+                
+                const response = await fetch(`${API_BASE_URL}/api/google-ads/performance?${params.toString()}`);
                 const data = await response.json();
+                
+                console.log("Performance data loaded:", data);
+                
+                // Check if we received an error response
+                if (data.error) {
+                    console.error('Error response from performance API:', data.message);
+                    metricsContainer.innerHTML = `<div class="col-12"><div class="alert alert-danger">Error retrieving performance data: ${data.message}</div></div>`;
+                    return;
+                }
+                
                 displayMetrics(data);
                 updatePerformanceChart(data);
                 
@@ -407,46 +686,153 @@ DASHBOARD_HTML = """
             try {
                 campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
                 
-                const response = await fetch(`${API_BASE_URL}/api/google-ads/campaigns`);
-                const campaigns = await response.json();
+                const params = new URLSearchParams({
+                    start_date: startDateInput.value,
+                    end_date: endDateInput.value,
+                    cache_buster: Date.now() // Prevent caching
+                });
                 
-                if (!campaigns || campaigns.length === 0) {
-                    campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">No campaign data available.</td></tr>';
+                const response = await fetch(`${API_BASE_URL}/api/google-ads/campaigns?${params.toString()}`);
+                const result = await response.json();
+                
+                console.log("Campaigns data loaded:", result);
+                
+                // Check if we received a structured response with status and data
+                if (result && result.status === 'success' && Array.isArray(result.data)) {
+                    // Store campaigns data globally for filtering
+                    campaignsData = result.data;
+                    console.log('Received campaign data in standard structure:', campaignsData);
+                } else if (result && Array.isArray(result)) {
+                    // Direct array response
+                    campaignsData = result;
+                    console.log('Received campaign data as direct array:', campaignsData);
+                } else if (result && result.status === 'error') {
+                    // Handle error response
+                    console.error('Error response from API:', result.message);
+                    campaignsBody.innerHTML = `<tr><td colspan="6" class="text-center">Error retrieving campaign data: ${result.message}</td></tr>`;
+                    campaignsNote.textContent = "";
+                    return;
+                } else if (result && result.data && Array.isArray(result.data) && result.data.length === 0) {
+                    // Empty data array
+                    console.warn('API returned empty data array');
+                    campaignsData = [];
+                    campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">No campaign data available from API.</td></tr>';
+                    campaignsNote.textContent = "";
+                    return;
+                } else {
+                    // Handle unexpected response format
+                    console.error('Unexpected response format:', result);
+                    campaignsData = [];
+                    campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">Unexpected data format received from API.</td></tr>';
                     campaignsNote.textContent = "";
                     return;
                 }
                 
-                let html = '';
+                // Enhance campaigns with region and type info
+                campaignsData.forEach(campaign => {
+                    campaign.region = getRegionFromCampaignName(campaign.name);
+                    campaign.state = getStateFromCampaignName(campaign.name);
+                    campaign.type = getCampaignType(campaign.name);
+                });
                 
-                // Check if we have a note in the first campaign
-                if (campaigns[0].note) {
-                    campaignsNote.textContent = "Note: " + campaigns[0].note;
+                // Check for note
+                if (campaignsData.length > 0 && campaignsData[0].note) {
+                    campaignsNote.textContent = "Note: " + campaignsData[0].note;
                 } else {
                     campaignsNote.textContent = "";
                 }
                 
-                campaigns.forEach(campaign => {
-                    const statusClass = campaign.status === 'ENABLED' ? 'bg-success' : 
-                                    campaign.status === 'PAUSED' ? 'bg-warning' : 'bg-secondary';
-                    
-                    html += `
-                    <tr>
-                        <td>${campaign.name}</td>
-                        <td><span class="badge ${statusClass}">${campaign.status}</span></td>
-                        <td>${formatNumber(campaign.impressions || 0)}</td>
-                        <td>${formatNumber(campaign.clicks || 0)}</td>
-                        <td>${(campaign.ctr || 0).toFixed(2)}%</td>
-                        <td>${formatCurrency(campaign.cost || 0)}</td>
-                    </tr>
-                    `;
-                });
+                // Display filtered campaigns
+                displayFilteredCampaigns();
                 
-                campaignsBody.innerHTML = html;
             } catch (error) {
                 console.error('Error loading campaigns:', error);
                 campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">Failed to load campaign data.</td></tr>';
                 campaignsNote.textContent = "";
             }
+        }
+        
+        // Get filtered campaigns
+        function getFilteredCampaigns() {
+            if (!campaignsData || campaignsData.length === 0) {
+                return [];
+            }
+            
+            let filtered = [...campaignsData];
+            
+            // Apply active filter
+            if (showActiveOnlyCheckbox.checked) {
+                filtered = filtered.filter(campaign => campaign.status === 'ENABLED');
+            }
+            
+            // Apply region filter
+            const selectedRegion = regionFilterSelect.value;
+            if (selectedRegion !== 'all') {
+                filtered = filtered.filter(campaign => campaign.region === selectedRegion);
+            }
+            
+            // Apply campaign type filter
+            const selectedType = campaignTypeFilterSelect.value;
+            if (selectedType !== 'all') {
+                filtered = filtered.filter(campaign => campaign.type === selectedType);
+            }
+            
+            return filtered;
+        }
+        
+        // Display filtered campaigns
+        function displayFilteredCampaigns() {
+            const filteredCampaigns = getFilteredCampaigns();
+            
+            if (filteredCampaigns.length === 0) {
+                campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">No campaigns match the selected filters.</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            
+            filteredCampaigns.forEach(campaign => {
+                const statusClass = campaign.status === 'ENABLED' ? 'bg-success' : 
+                                  campaign.status === 'PAUSED' ? 'bg-warning' : 'bg-secondary';
+                
+                // Add region indicator
+                const regionBadge = campaign.region && campaign.region !== 'other' ? 
+                    `<span class="badge bg-info ms-2">${campaign.region.charAt(0).toUpperCase() + campaign.region.slice(1)}</span>` : '';
+                
+                // Add state indicator
+                const stateBadge = campaign.state ? 
+                    `<span class="badge bg-secondary ms-1">${campaign.state}</span>` : '';
+                
+                // Add campaign type indicator with different colors for different types
+                let typeBadgeClass = 'bg-secondary';
+                if (campaign.type === 'Search') typeBadgeClass = 'bg-primary';
+                if (campaign.type === 'PMax') typeBadgeClass = 'bg-success';
+                if (campaign.type === 'Brand') typeBadgeClass = 'bg-warning';
+                if (campaign.type === 'NonBrand') typeBadgeClass = 'bg-danger';
+                if (campaign.type === 'Display') typeBadgeClass = 'bg-info';
+                if (campaign.type === 'Video') typeBadgeClass = 'bg-dark';
+                if (campaign.type === 'Shopping') typeBadgeClass = 'bg-success';
+                
+                const typeBadge = `<span class="badge ${typeBadgeClass} ms-1">${campaign.type}</span>`;
+                
+                html += `
+                <tr>
+                    <td>
+                        ${campaign.name}
+                        ${typeBadge}
+                        ${regionBadge}
+                        ${stateBadge}
+                    </td>
+                    <td><span class="badge ${statusClass}">${campaign.status}</span></td>
+                    <td>${formatNumber(campaign.impressions || 0)}</td>
+                    <td>${formatNumber(campaign.clicks || 0)}</td>
+                    <td>${(campaign.ctr || 0).toFixed(2)}%</td>
+                    <td>${formatCurrency(campaign.cost || 0)}</td>
+                </tr>
+                `;
+            });
+            
+            campaignsBody.innerHTML = html;
         }
     </script>
 </body>
@@ -575,7 +961,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
         try:
             # Get data from Google Ads client
             data = ads_client.get_performance_data(start_date, end_date)
-            logger.info("Retrieved performance data")
+            logger.info(f"Retrieved performance data for period: {start_date} to {end_date}")
         except Exception as e:
             # Fallback to mock data
             logger.error(f"Error retrieving performance data: {str(e)}")
@@ -584,6 +970,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
     
@@ -599,16 +988,30 @@ class DashboardHandler(BaseHTTPRequestHandler):
         
         try:
             # Get data from Google Ads client
-            data = ads_client.get_campaigns_data(start_date, end_date)
-            logger.info("Retrieved campaigns data")
+            campaigns = ads_client.get_campaigns_data(start_date, end_date)
+            logger.info(f"Retrieved campaigns data for period: {start_date} to {end_date}")
+            
+            # Wrap in a structured response
+            data = {
+                "status": "success",
+                "message": "Campaign data retrieved successfully",
+                "data": campaigns
+            }
         except Exception as e:
             # Fallback to mock data
             logger.error(f"Error retrieving campaigns data: {str(e)}")
-            data = CAMPAIGNS_DATA
+            data = {
+                "status": "error", 
+                "message": f"Error retrieving campaign data: {str(e)}",
+                "data": CAMPAIGNS_DATA
+            }
         
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
     
@@ -627,6 +1030,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
         
         self.send_response(200)
         self.send_header("Content-type", "application/json")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(json.dumps(health_data).encode())
 
