@@ -92,6 +92,129 @@ DASHBOARD_HTML = """
             color: #666;
             font-style: italic;
         }
+        
+        /* Funnel Visualization Styles */
+        .funnel-container {
+            padding: 20px;
+            background-color: #222;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            color: white;
+            margin-bottom: 20px;
+        }
+        .funnel-step {
+            position: relative;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .funnel-step:hover {
+            transform: translateX(5px);
+        }
+        .funnel-bar {
+            height: 40px;
+            background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding-left: 15px;
+            color: white;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+        }
+        .funnel-label {
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding-right: 15px;
+        }
+        .funnel-value {
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        }
+        .funnel-rate {
+            font-size: 0.85rem;
+            color: #a1a1aa;
+            margin-left: 15px;
+        }
+        
+        /* Badge Styles */
+        .badge {
+            display: inline-block;
+            padding: 0.35em 0.65em;
+            font-size: 0.75em;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.375rem;
+        }
+        .badge-success { background-color: #28a745; }
+        .badge-warning { background-color: #ffc107; color: #212529; }
+        .badge-secondary { background-color: #6c757d; }
+        .badge-info { background-color: #0dcaf0; }
+        .badge-primary { background-color: #0d6efd; }
+        .badge-danger { background-color: #dc3545; }
+        .badge-dark { background-color: #212529; }
+        
+        /* Connection status indicators */
+        .connection-card {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-green { background-color: #4CAF50; }
+        .status-amber { background-color: #FFC107; }
+        .status-red { background-color: #F44336; }
+        .status-box {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            border: 1px solid #e0e0e0;
+        }
+        .status-box.connected { background-color: #e8f5e9; border-color: #a5d6a7; }
+        .status-box.warning { background-color: #fff8e1; border-color: #ffe082; }
+        .status-box.disconnected { background-color: #ffebee; border-color: #ef9a9a; }
+        
+        /* Date Range Styles */
+        .date-range-picker {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .date-range-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .date-range-buttons .btn {
+            min-width: 90px;
+        }
+        .date-range-buttons .btn:hover {
+            transform: translateY(-2px);
+            transition: transform 0.2s;
+        }
+        .custom-date-label {
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -103,20 +226,39 @@ DASHBOARD_HTML = """
                     <p class="text-muted">Google Ads Performance Data</p>
                 </div>
                 <div class="col-md-6">
-                    <div class="d-flex justify-content-end">
-                        <div class="d-flex me-3">
-                            <div class="me-2">
-                                <label for="start-date" class="form-label">Start Date</label>
-                                <input type="date" id="start-date" class="form-control date-picker">
-                            </div>
-                            <div>
-                                <label for="end-date" class="form-label">End Date</label>
-                                <input type="date" id="end-date" class="form-control date-picker">
-                            </div>
+                    <div class="date-range-picker">
+                        <div class="date-range-buttons">
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-range="7">Last 7 days</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm active" data-range="30">Last 30 days</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-range="90">Last 90 days</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-range="current-month">This Month</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-range="last-month">Last Month</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-range="quarter">Last Quarter</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-range="ytd">Year to Date</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-range="custom">Custom</button>
                         </div>
-                        <div>
-                            <label class="form-label">&nbsp;</label>
-                            <button id="refresh-btn" class="btn btn-primary d-block">Refresh Data</button>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="d-flex">
+                                    <div class="me-2">
+                                        <div class="custom-date-label">Start Date</div>
+                                        <input type="date" id="start-date" class="form-control form-control-sm date-picker">
+                                    </div>
+                                    <div class="me-2">
+                                        <div class="custom-date-label">End Date</div>
+                                        <input type="date" id="end-date" class="form-control form-control-sm date-picker">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button id="refresh-btn" class="btn btn-primary btn-sm w-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise me-1" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                                    </svg>
+                                    Refresh Data
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -147,6 +289,49 @@ DASHBOARD_HTML = """
                     <div class="card-body">
                         <canvas id="performance-chart" height="300"></canvas>
                         <div id="chart-note" class="data-note mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversion Funnel -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="funnel-container">
+                    <h5 class="mb-4">Conversion Funnel</h5>
+                    <div id="funnel-steps">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-light" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5>Conversion Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <h6 class="text-muted">Click-Through Rate</h6>
+                                <div id="ctr-value" class="h3">0.0%</div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <h6 class="text-muted">Conversion Rate</h6>
+                                <div id="conv-rate-value" class="h3">0.0%</div>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-muted">Cost per Click</h6>
+                                <div id="cpc-value" class="h3">$0.00</div>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-muted">Cost per Conversion</h6>
+                                <div id="cpa-value" class="h3">$0.00</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -194,16 +379,20 @@ DASHBOARD_HTML = """
                                     <tr>
                                         <th>Campaign</th>
                                         <th>Status</th>
+                                        <th>Budget</th>
                                         <th>Impressions</th>
                                         <th>Clicks</th>
                                         <th>CTR</th>
+                                        <th>Conv.</th>
+                                        <th>Conv. Rate</th>
                                         <th>Cost</th>
+                                        <th>Cost/Conv.</th>
                                     </tr>
                                 </thead>
                                 <tbody id="campaigns-tbody">
                                     <!-- Campaign data will be loaded here -->
                                     <tr>
-                                        <td colspan="6" class="text-center">
+                                        <td colspan="10" class="text-center">
                                             <div class="spinner-border text-primary" role="status">
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
@@ -222,11 +411,87 @@ DASHBOARD_HTML = """
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
-                        <h5>Google Ads API Connection Status</h5>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>API Connection Status</h5>
+                        <button id="auth-btn" class="btn btn-sm btn-outline-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-key" viewBox="0 0 16 16">
+                                <path d="M0 8a4 4 0 0 1 7.465-2H14a.5.5 0 0 1 .354.146l1.5 1.5a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0L13 9.207l-.646.647a.5.5 0 0 1-.708 0L11 9.207l-.646.647a.5.5 0 0 1-.708 0L9 9.207l-.646.647A.5.5 0 0 1 8 10h-.535A4 4 0 0 1 0 8zm4-3a3 3 0 1 0 2.712 4.285A.5.5 0 0 1 7.163 9h.63l.853-.854a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.793-.793-1-1h-6.63a.5.5 0 0 1-.451-.285A3 3 0 0 0 4 5z"/>
+                                <path d="M4 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                            </svg>
+                            Authentication
+                        </button>
                     </div>
                     <div class="card-body">
-                        <div id="api-status">Checking API connection status...</div>
+                        <div class="connection-card">
+                            <div id="ads-api-status" class="status-box">
+                                <span class="status-indicator status-amber"></span>
+                                <span>Google Ads API: Checking...</span>
+                            </div>
+                            <div id="data-api-status" class="status-box">
+                                <span class="status-indicator status-amber"></span>
+                                <span>Performance Data: Checking...</span>
+                            </div>
+                            <div id="campaign-api-status" class="status-box">
+                                <span class="status-indicator status-amber"></span>
+                                <span>Campaign Data: Checking...</span>
+                            </div>
+                        </div>
+                        <div id="api-status" class="mt-2" style="display:none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auth Instructions Modal -->
+        <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="authModalLabel">Google Ads API Authentication</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <strong>Authentication Process</strong>
+                            <p>This dashboard uses the Google Ads API to fetch real data. You'll need to set up authentication to access your account data.</p>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">Step 1: Set Up OAuth Credentials</div>
+                            <div class="card-body">
+                                <p>Ensure you have the following credentials configured as environment variables:</p>
+                                <ul>
+                                    <li><strong>Client ID</strong> - From Google Cloud Console</li>
+                                    <li><strong>Client Secret</strong> - From Google Cloud Console</li>
+                                    <li><strong>Developer Token</strong> - From Google Ads account</li>
+                                    <li><strong>Refresh Token</strong> - Generated via OAuth flow</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-3">
+                            <div class="card-header">Step 2: Update Environment Variables</div>
+                            <div class="card-body">
+                                <p>Update your environment variables in DigitalOcean App Platform:</p>
+                                <pre><code>GOOGLE_ADS_CLIENT_ID=your_client_id
+GOOGLE_ADS_CLIENT_SECRET=your_client_secret
+GOOGLE_ADS_DEVELOPER_TOKEN=your_developer_token
+GOOGLE_ADS_REFRESH_TOKEN=your_refresh_token
+GOOGLE_ADS_LOGIN_CUSTOMER_ID=your_customer_id</code></pre>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">Step 3: Generate a Refresh Token</div>
+                            <div class="card-body">
+                                <p>To generate a refresh token, run the token script in your terminal:</p>
+                                <pre><code>python backend/get_new_refresh_token.py</code></pre>
+                                <p>Follow the browser prompts to authenticate with your Google account.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -476,12 +741,75 @@ DASHBOARD_HTML = """
         startDateInput.value = formatDate(thirtyDaysAgo);
         endDateInput.value = formatDate(today);
 
+        // Set up date range buttons
+        function setupDateRangeButtons() {
+            const dateRangeButtons = document.querySelectorAll('.date-range-buttons [data-range]');
+            
+            dateRangeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all buttons
+                    dateRangeButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    // Add active class to clicked button
+                    button.classList.add('active');
+                    
+                    const range = button.getAttribute('data-range');
+                    const today = new Date();
+                    const end = new Date(today); // Default end date is today
+                    const start = new Date(today); // Will be adjusted based on range
+                    
+                    if (range === 'custom') {
+                        // Do nothing, just let user select their custom dates
+                        return;
+                    } else if (range === 'current-month') {
+                        // First day of current month to today
+                        start.setDate(1);
+                    } else if (range === 'last-month') {
+                        // First day of last month to last day of last month
+                        end.setDate(0); // Last day of previous month
+                        start.setDate(1); // First day of current month
+                        start.setMonth(start.getMonth() - 1); // First day of last month
+                    } else if (range === 'quarter') {
+                        // 90 days ago to today
+                        start.setDate(today.getDate() - 90);
+                    } else if (range === 'ytd') {
+                        // January 1st to today
+                        start.setMonth(0);
+                        start.setDate(1);
+                    } else {
+                        // For 7, 30, 90 days ranges
+                        start.setDate(end.getDate() - parseInt(range));
+                    }
+                    
+                    // Update date inputs
+                    startDateInput.value = formatDate(start);
+                    endDateInput.value = formatDate(end);
+                    
+                    // Automatically refresh data
+                    loadPerformanceData();
+                    loadCampaigns();
+                });
+            });
+        }
+
         // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
+            setupDateRangeButtons();
+            setupAuthButton();
             loadPerformanceData();
             loadCampaigns();
             checkApiStatus();
         });
+        
+        // Setup Auth Button
+        function setupAuthButton() {
+            const authBtn = document.getElementById('auth-btn');
+            const authModal = new bootstrap.Modal(document.getElementById('authModal'));
+            
+            authBtn.addEventListener('click', () => {
+                authModal.show();
+            });
+        }
 
         refreshBtn.addEventListener('click', () => {
             console.log("Refresh button clicked");
@@ -522,6 +850,34 @@ DASHBOARD_HTML = """
             return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
         }
 
+        // Update API status indicator
+        function updateApiStatusIndicator(elementId, status, text) {
+            const element = document.getElementById(elementId);
+            const indicator = element.querySelector('.status-indicator');
+            const statusText = element.querySelector('span:last-child');
+            
+            // Clear all status classes
+            element.classList.remove('connected', 'warning', 'disconnected');
+            indicator.classList.remove('status-green', 'status-amber', 'status-red');
+            
+            // Set new status
+            if (status === 'connected') {
+                element.classList.add('connected');
+                indicator.classList.add('status-green');
+            } else if (status === 'warning') {
+                element.classList.add('warning');
+                indicator.classList.add('status-amber');
+            } else {
+                element.classList.add('disconnected');
+                indicator.classList.add('status-red');
+            }
+            
+            // Update text if provided
+            if (text) {
+                statusText.textContent = text;
+            }
+        }
+        
         // Check API status
         async function checkApiStatus() {
             try {
@@ -529,6 +885,13 @@ DASHBOARD_HTML = """
                 const data = await response.json();
                 
                 if (data.has_google_ads_credentials) {
+                    // Update status indicators
+                    updateApiStatusIndicator('ads-api-status', 'connected', 'Google Ads API: Connected');
+                    updateApiStatusIndicator('data-api-status', 'connected', 'Performance Data: Available');
+                    updateApiStatusIndicator('campaign-api-status', 'connected', 'Campaign Data: Available');
+                    
+                    // Store connection info in hidden element
+                    apiStatus.style.display = 'none';
                     apiStatus.innerHTML = `
                         <div class="alert alert-success">
                             <strong>Connected to Google Ads API</strong>
@@ -537,6 +900,13 @@ DASHBOARD_HTML = """
                         </div>
                     `;
                 } else {
+                    // Update status indicators for mock data
+                    updateApiStatusIndicator('ads-api-status', 'warning', 'Google Ads API: Using Mock Data');
+                    updateApiStatusIndicator('data-api-status', 'warning', 'Performance Data: Mock');
+                    updateApiStatusIndicator('campaign-api-status', 'warning', 'Campaign Data: Mock');
+                    
+                    // Store warning info in hidden element
+                    apiStatus.style.display = 'none';
                     apiStatus.innerHTML = `
                         <div class="alert alert-warning">
                             <strong>Using Mock Data</strong>
@@ -547,6 +917,14 @@ DASHBOARD_HTML = """
                 }
             } catch (error) {
                 console.error('Error checking API status:', error);
+                
+                // Update status indicators
+                updateApiStatusIndicator('ads-api-status', 'disconnected', 'Google Ads API: Error');
+                updateApiStatusIndicator('data-api-status', 'disconnected', 'Performance Data: Unavailable');
+                updateApiStatusIndicator('campaign-api-status', 'disconnected', 'Campaign Data: Unavailable');
+                
+                // Store error info in hidden element
+                apiStatus.style.display = 'none';
                 apiStatus.innerHTML = `
                     <div class="alert alert-danger">
                         <strong>Error Checking API Status</strong>
@@ -576,11 +954,20 @@ DASHBOARD_HTML = """
                 if (data.error) {
                     console.error('Error response from performance API:', data.message);
                     metricsContainer.innerHTML = `<div class="col-12"><div class="alert alert-danger">Error retrieving performance data: ${data.message}</div></div>`;
+                    updateApiStatusIndicator('data-api-status', 'disconnected', 'Performance Data: Error');
                     return;
                 }
                 
                 displayMetrics(data);
                 updatePerformanceChart(data);
+                updateConversionFunnel(data);
+                
+                // Update status indicator
+                if (data.impressions && data.impressions.note && data.impressions.note.includes("MOCK")) {
+                    updateApiStatusIndicator('data-api-status', 'warning', 'Performance Data: Mock');
+                } else {
+                    updateApiStatusIndicator('data-api-status', 'connected', 'Performance Data: Real');
+                }
                 
                 // Display data note if present
                 if (data.impressions && data.impressions.note) {
@@ -592,6 +979,7 @@ DASHBOARD_HTML = """
                 console.error('Error loading performance data:', error);
                 metricsContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Failed to load performance data.</div></div>';
                 chartNote.textContent = "";
+                updateApiStatusIndicator('data-api-status', 'disconnected', 'Performance Data: Connection Error');
             }
         }
 
@@ -680,6 +1068,70 @@ DASHBOARD_HTML = """
                 }
             });
         }
+        
+        // Update conversion funnel
+        function updateConversionFunnel(data) {
+            // Get values from data
+            const impressions = data.impressions?.value || 0;
+            const clicks = data.clicks?.value || 0;
+            const conversions = data.conversions?.value || 0;
+            
+            // Parse numeric values and ensure they're numbers
+            const impressionsNum = typeof impressions === 'string' ? parseInt(impressions.replace(/,/g, '')) : impressions;
+            const clicksNum = typeof clicks === 'string' ? parseInt(clicks.replace(/,/g, '')) : clicks;
+            const conversionsNum = typeof conversions === 'string' ? parseInt(conversions.replace(/,/g, '')) : conversions;
+            
+            // Calculate percentages for visualization width
+            const maxWidth = 100; // 100% width for the top bar
+            const clicksPercentage = impressionsNum > 0 ? (clicksNum / impressionsNum) * 100 : 0;
+            const conversionsPercentage = clicksNum > 0 ? (conversionsNum / clicksNum) * 100 : 0;
+            
+            // Calculate rates
+            const ctr = impressionsNum > 0 ? (clicksNum / impressionsNum) * 100 : 0;
+            const convRate = clicksNum > 0 ? (conversionsNum / clicksNum) * 100 : 0;
+            
+            // Get cost per metrics
+            const costStr = data.cost?.value || '$0.00';
+            const cost = parseFloat(costStr.replace(/[^0-9.-]+/g, ''));
+            const cpc = clicksNum > 0 ? cost / clicksNum : 0;
+            const cpa = conversionsNum > 0 ? cost / conversionsNum : 0;
+            
+            // Update funnel visualization
+            document.getElementById('funnel-steps').innerHTML = `
+                <div class="funnel-step">
+                    <div class="funnel-bar" style="width: ${maxWidth}%">
+                        <div class="funnel-label">
+                            <span>Impressions</span>
+                            <span class="funnel-value">${formatNumber(impressionsNum)}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="funnel-step">
+                    <div class="funnel-bar" style="width: ${Math.max(5, clicksPercentage)}%">
+                        <div class="funnel-label">
+                            <span>Clicks</span>
+                            <span class="funnel-value">${formatNumber(clicksNum)}</span>
+                        </div>
+                    </div>
+                    <div class="funnel-rate">CTR: ${ctr.toFixed(2)}%</div>
+                </div>
+                <div class="funnel-step">
+                    <div class="funnel-bar" style="width: ${Math.max(5, conversionsPercentage)}%">
+                        <div class="funnel-label">
+                            <span>Conversions</span>
+                            <span class="funnel-value">${formatNumber(conversionsNum)}</span>
+                        </div>
+                    </div>
+                    <div class="funnel-rate">Conv. Rate: ${convRate.toFixed(2)}%</div>
+                </div>
+            `;
+            
+            // Update conversion metrics
+            document.getElementById('ctr-value').textContent = `${ctr.toFixed(2)}%`;
+            document.getElementById('conv-rate-value').textContent = `${convRate.toFixed(2)}%`;
+            document.getElementById('cpc-value').textContent = formatCurrency(cpc);
+            document.getElementById('cpa-value').textContent = formatCurrency(cpa);
+        }
 
         // Load campaigns
         async function loadCampaigns() {
@@ -702,29 +1154,46 @@ DASHBOARD_HTML = """
                     // Store campaigns data globally for filtering
                     campaignsData = result.data;
                     console.log('Received campaign data in standard structure:', campaignsData);
+                    
+                    // Check if it's mock data by looking at the first item
+                    if (campaignsData.length > 0 && campaignsData[0].note && campaignsData[0].note.includes("MOCK")) {
+                        updateApiStatusIndicator('campaign-api-status', 'warning', 'Campaign Data: Mock');
+                    } else {
+                        updateApiStatusIndicator('campaign-api-status', 'connected', 'Campaign Data: Real');
+                    }
                 } else if (result && Array.isArray(result)) {
                     // Direct array response
                     campaignsData = result;
                     console.log('Received campaign data as direct array:', campaignsData);
+                    
+                    // Check if it's mock data by looking at the first item
+                    if (campaignsData.length > 0 && campaignsData[0].note && campaignsData[0].note.includes("MOCK")) {
+                        updateApiStatusIndicator('campaign-api-status', 'warning', 'Campaign Data: Mock');
+                    } else {
+                        updateApiStatusIndicator('campaign-api-status', 'connected', 'Campaign Data: Real');
+                    }
                 } else if (result && result.status === 'error') {
                     // Handle error response
                     console.error('Error response from API:', result.message);
-                    campaignsBody.innerHTML = `<tr><td colspan="6" class="text-center">Error retrieving campaign data: ${result.message}</td></tr>`;
+                    campaignsBody.innerHTML = `<tr><td colspan="10" class="text-center">Error retrieving campaign data: ${result.message}</td></tr>`;
                     campaignsNote.textContent = "";
+                    updateApiStatusIndicator('campaign-api-status', 'disconnected', 'Campaign Data: Error');
                     return;
                 } else if (result && result.data && Array.isArray(result.data) && result.data.length === 0) {
                     // Empty data array
                     console.warn('API returned empty data array');
                     campaignsData = [];
-                    campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">No campaign data available from API.</td></tr>';
+                    campaignsBody.innerHTML = '<tr><td colspan="10" class="text-center">No campaign data available from API.</td></tr>';
                     campaignsNote.textContent = "";
+                    updateApiStatusIndicator('campaign-api-status', 'warning', 'Campaign Data: Empty');
                     return;
                 } else {
                     // Handle unexpected response format
                     console.error('Unexpected response format:', result);
                     campaignsData = [];
-                    campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">Unexpected data format received from API.</td></tr>';
+                    campaignsBody.innerHTML = '<tr><td colspan="10" class="text-center">Unexpected data format received from API.</td></tr>';
                     campaignsNote.textContent = "";
+                    updateApiStatusIndicator('campaign-api-status', 'disconnected', 'Campaign Data: Format Error');
                     return;
                 }
                 
@@ -747,8 +1216,9 @@ DASHBOARD_HTML = """
                 
             } catch (error) {
                 console.error('Error loading campaigns:', error);
-                campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">Failed to load campaign data.</td></tr>';
+                campaignsBody.innerHTML = '<tr><td colspan="10" class="text-center">Failed to load campaign data.</td></tr>';
                 campaignsNote.textContent = "";
+                updateApiStatusIndicator('campaign-api-status', 'disconnected', 'Campaign Data: Connection Error');
             }
         }
         
@@ -785,7 +1255,7 @@ DASHBOARD_HTML = """
             const filteredCampaigns = getFilteredCampaigns();
             
             if (filteredCampaigns.length === 0) {
-                campaignsBody.innerHTML = '<tr><td colspan="6" class="text-center">No campaigns match the selected filters.</td></tr>';
+                campaignsBody.innerHTML = '<tr><td colspan="10" class="text-center">No campaigns match the selected filters.</td></tr>';
                 return;
             }
             
@@ -824,10 +1294,14 @@ DASHBOARD_HTML = """
                         ${stateBadge}
                     </td>
                     <td><span class="badge ${statusClass}">${campaign.status}</span></td>
+                    <td>${campaign.budget || '$0.00'}</td>
                     <td>${formatNumber(campaign.impressions || 0)}</td>
                     <td>${formatNumber(campaign.clicks || 0)}</td>
                     <td>${(campaign.ctr || 0).toFixed(2)}%</td>
+                    <td>${formatNumber(campaign.conversions || 0)}</td>
+                    <td>${(campaign.conversion_rate || 0).toFixed(2)}%</td>
                     <td>${formatCurrency(campaign.cost || 0)}</td>
+                    <td>${formatCurrency(campaign.cost_per_conversion || 0)}</td>
                 </tr>
                 `;
             });

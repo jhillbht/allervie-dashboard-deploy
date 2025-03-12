@@ -1,6 +1,6 @@
-name: allervie-test-deployment
+name: allervie-analytics-dashboard
 services:
-- name: allervie-dashboard-deploy
+- name: api
   github:
     branch: main
     repo: jhillbht/allervie-dashboard-deploy
@@ -14,28 +14,22 @@ services:
   envs:
   - key: FLASK_ENV
     value: production
-  - key: ALLOW_MOCK_DATA
-    value: "false"
-  - key: USE_REAL_ADS_CLIENT
-    value: "true"
   - key: PORT
     value: "8080"
   - key: GOOGLE_ADS_CLIENT_ID
-    value: "22083613754-d1omeg2958vrsndpqg2v1jp0ncm7sr23.apps.googleusercontent.com"
+    value: "[YOUR ACTUAL CLIENT ID]"
   - key: GOOGLE_ADS_CLIENT_SECRET
     type: SECRET
-    value: "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"
+    value: "YOUR_CLIENT_SECRET"
   - key: GOOGLE_ADS_DEVELOPER_TOKEN
     type: SECRET
-    value: "EkXFENjahSDnpNRZJhWAAw"
+    value: "YOUR_DEVELOPER_TOKEN"
   - key: GOOGLE_ADS_LOGIN_CUSTOMER_ID
     value: "8127539892"
   - key: GOOGLE_ADS_REFRESH_TOKEN
     type: SECRET
-    value: "1//0fd0hT4p-0f4nCgYIARAAGA8SNwF-L9IrExeEoV1QfhOWXSUZCc1I1j_RpHpQ1bJ_xlDCmcDSCZ103BiUsy1MAr6awvafzZ6sPTk"
+    value: "YOUR_REFRESH_TOKEN"
   - key: GOOGLE_ADS_USE_PROTO_PLUS
     value: "true"
   - key: GOOGLE_ADS_API_VERSION
     value: "v17"
-  - key: GOOGLE_ADS_TOKEN_URI
-    value: "https://oauth2.googleapis.com/token"
